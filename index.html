@@ -9,9 +9,12 @@
     <script type="text/javascript" src="assets/js/data.js"></script>
     <script type="text/paperscript" canvas="canvas">
       var keyPaths = [];
+      var textPaths = [];
       var circles = [];
-      var octave = 2;
       var colorGradient = gradient('#74ebd5', '#acb6e5', 60);
+      var octave = 2;
+      var labels = true;
+      var bubbles = true;
       
       var keyboard = {
         point: new Point(view.size.width * 1/8, view.size.height * 1/4),
@@ -47,7 +50,8 @@
       ovbText.fillColor = 'black';
       ovbText.fontSize = '1.5em';
       ovbText.content = '\`';
-      
+      textPaths.push(ovbText);
+
       var ova = ovb.clone();
       ova.position = octaveControl.point2;
       ova.onClick = octaveUp;
@@ -56,7 +60,21 @@
       var ovaText = ovbText.clone();
       ovaText.position = ova.position;
       ovaText.content = '\'';
+      textPaths.push(ovaText);
 
+      ovb.removeSegment(2);
+      ova.removeSegment(0);
+
+      rangeLower = ovbText.clone();
+      rangeLower.position.y -= keyboard.size.height * 1/2;
+      rangeLower.content = 'C' + (octave + 1);
+      rangeLower.fillColor = 'white';
+      rangeLower.fontsize = '2.5em';
+
+      rangeUpper = rangeLower.clone();
+      rangeUpper.position.x += view.size.width * 7/8;
+      rangeUpper.content = 'C' + (octave + 3);
+      
       keys.forEach(function(key) {
         var position = new Point(keyboard.point.x + keyboard.size.width * key.position/60, keyboard.point.y);
         var size = key.blackKey ? keySizes.black : keySizes.white;
@@ -76,6 +94,8 @@
         text1.fontSize = key.blackKey ? '1.2em' : '1.5em';
         var text2 = text1.clone()
         text2.position = new Point(position + new Point(size.width * 1/2, size.height * 15/16));
+        textPaths.push(text1);
+        textPaths.push(text2);
 
         if (!key.blackKey) keyPath.sendToBack();
         if (key.trigger1) text1.content = key.trigger1;
@@ -99,6 +119,10 @@
         } else if(event.key == '\'') {
           octaveUp();
           ova.fillColor = '#d0d0d0'; 
+        } else if(event.key == '\\') {
+          toggleLabels();
+        } else if(event.key == '\|') {
+          toggleBubbles();
         }
         if(keyData[event.key]) {
           var keyPath = keyPaths[keyData[event.key]-1]
@@ -119,31 +143,6 @@
         }
       }
 
-      function octaveUp() {
-        if (octave < 3) {
-          octave += 1;
-        }
-      }
-
-      function octaveDown() {
-        if (octave > 0) {
-          octave -= 1; 
-        }
-      }
-
-      function playKey(keyPath) {
-        note = keyPath.key.note + 12 * octave;
-        notes[note].sound.play();
-        var radius = 2;
-        var top = new Path.Circle(new Point(keyPath.position.x, keyboard.point.y + radius), radius);
-        top.fillColor = colorGradient[note-1]; 
-        top.sendToBack();
-        var bottom = top.clone();
-        bottom.position = new Point(keyPath.position.x, keyboard.point.y + keyboard.size.height - radius);
-        circles.push(top);
-        circles.push(bottom);
-      }
-
       function onFrame(event) {
         for (var i=0; i<circles.length; i++) {
           circles[i].opacity *= 0.9;
@@ -154,6 +153,51 @@
             circles.splice(i, 1);
             i--;
           }
+        }
+      }
+      
+      function toggleLabels() {
+        for (var i=0; i<textPaths.length; i++) {
+          textPaths[i].opacity = labels ? 1: 0;
+        }
+        labels = !labels;
+      }
+
+      function toggleBubbles() {
+        bubbles = !bubbles;
+      }
+
+      function octaveUp() {
+        if (octave < 3) {
+          octave += 1;
+          updateRangeLabels();
+        }
+      }
+
+      function octaveDown() {
+        if (octave > 0) {
+          octave -= 1; 
+          updateRangeLabels();
+        }
+      }
+
+      function updateRangeLabels() {
+        rangeLower.content = 'C' + (octave + 1);
+        rangeUpper.content = 'C' + (octave + 3);
+      }
+
+      function playKey(keyPath) {
+        note = keyPath.key.note + 12 * octave;
+        notes[note].sound.play();
+        var radius = 2;
+        if (bubbles) {
+          var top = new Path.Circle(new Point(keyPath.position.x, keyboard.point.y + radius), radius);
+          top.fillColor = colorGradient[note-1]; 
+          top.sendToBack();
+          var bottom = top.clone();
+          bottom.position = new Point(keyPath.position.x, keyboard.point.y + keyboard.size.height - radius);
+          circles.push(top);
+          circles.push(bottom);
         }
       }
 
