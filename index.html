@@ -8,24 +8,184 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.0.13/howler.min.js"></script>
     <script type="text/javascript" src="assets/js/data.js"></script>
     <script type="text/paperscript" canvas="canvas">
+      var keyPaths = [];
+      var circles = [];
       var octave = 2;
+      var colorGradient = gradient('#74ebd5', '#acb6e5', 60);
+      
+      var keyboard = {
+        point: new Point(view.size.width * 1/8, view.size.height * 1/4),
+        size: new Size(view.size.width * 3/4, view.size.height * 1/2)
+      }
+
+      var keySizes = {
+        white: new Size(keyboard.size.width * 1/15, keyboard.size.height),
+        black: new Size(keyboard.size.width * 1/30, keyboard.size.height * 3/4)
+      }
+
+      var octaveControl = {
+        point1: new Point(view.size.width * 1/16, view.size.height * 1/2),
+        point2: new Point(view.size.width * 15/16, view.size.height * 1/2),
+        radius: view.size.width * 1/32
+      }
+      
+      var title = new PointText(new Point(view.size.width * 1/2, view.size.height * 1/8));
+      title.fillColor = 'white';
+      title.justification = 'center';
+      title.fontWeight = 'bold';
+      title.fontSize = '5em';
+      title.content = 'Virtual Piano';
+
+      var ovb = new Path.Circle(octaveControl.point1, octaveControl.radius);
+      ovb.fillColor = 'white';
+      ovb.onClick = octaveDown;
+      ovb.onMouseDown = function(event) { this.fillColor = '#d0d0d0'; }
+      ovb.onMouseUp = function(event) { this.fillColor = 'white'; }
+      var ovbText = new PointText(ovb.position);
+      ovbText.justification = 'center';
+      ovbText.fontWeight = 'bold';
+      ovbText.fillColor = 'black';
+      ovbText.fontSize = '1.5em';
+      ovbText.content = '\`';
+      
+      var ova = ovb.clone();
+      ova.position = octaveControl.point2;
+      ova.onClick = octaveUp;
+      ova.onMouseDown = function(event) { this.fillColor = '#d0d0d0'; }
+      ova.onMouseUp = function(event) { this.fillColor = 'white'; }
+      var ovaText = ovbText.clone();
+      ovaText.position = ova.position;
+      ovaText.content = '\'';
+
+      keys.forEach(function(key) {
+        var position = new Point(keyboard.point.x + keyboard.size.width * key.position/60, keyboard.point.y);
+        var size = key.blackKey ? keySizes.black : keySizes.white;
+        var keyPath = new Path.Rectangle(position, size);
+        var text1 = new PointText(position + new Point(size.width * 1/2, size.height * 13/16));
+
+        keyPath.key = key;
+        keyPath.neutralColor = key.blackKey ? 'black' : 'white';
+        keyPath.pressColor = key.blackKey ? '#303030' : '#d0d0d0';
+
+        keyPath.strokeColor = 'black';
+        keyPath.fillColor = keyPath.neutralColor;
+
+        text1.justification = 'center';
+        text1.fontWeight = 'bold';
+        text1.fillColor = key.blackKey ? 'white' : 'black';
+        text1.fontSize = key.blackKey ? '1.2em' : '1.5em';
+        var text2 = text1.clone()
+        text2.position = new Point(position + new Point(size.width * 1/2, size.height * 15/16));
+
+        if (!key.blackKey) keyPath.sendToBack();
+        if (key.trigger1) text1.content = key.trigger1;
+        if (key.trigger2) text2.content = key.trigger2;
+
+        keyPath.onMouseDown = function(event) {
+          this.fillColor = this.pressColor;
+          playKey(this);
+        }
+        keyPath.onMouseUp = function(event) {
+          this.fillColor = this.neutralColor;
+        }
+        keyPaths.push(keyPath)
+      });
+      
+
+      function onKeyDown(event) {
+        if(event.key == '`') {
+          octaveDown();
+          ovb.fillColor = '#d0d0d0'; 
+        } else if(event.key == '\'') {
+          octaveUp();
+          ova.fillColor = '#d0d0d0'; 
+        }
+        if(keyData[event.key]) {
+          var keyPath = keyPaths[keyData[event.key]-1]
+          keyPath.fillColor = keyPath.pressColor;
+          playKey(keyPath);
+        }
+      }
 
       function onKeyUp(event) {
         if(event.key == '`') {
-          if(octave > 0) {
-            octave -= 1;
-          }
+          ovb.fillColor = 'white';
         } else if(event.key == '\'') {
-            octave += 1;
-          if(octave < 3) {
+          ova.fillColor = 'white';
+        }
+        if(keyData[event.key]) {
+          var keyPath = keyPaths[keyData[event.key]-1]
+          keyPath.fillColor = keyPath.neutralColor;
+        }
+      }
+
+      function octaveUp() {
+        if (octave < 3) {
+          octave += 1;
+        }
+      }
+
+      function octaveDown() {
+        if (octave > 0) {
+          octave -= 1; 
+        }
+      }
+
+      function playKey(keyPath) {
+        note = keyPath.key.note + 12 * octave;
+        notes[note].sound.play();
+        var radius = 2;
+        var top = new Path.Circle(new Point(keyPath.position.x, keyboard.point.y + radius), radius);
+        top.fillColor = colorGradient[note-1]; 
+        top.sendToBack();
+        var bottom = top.clone();
+        bottom.position = new Point(keyPath.position.x, keyboard.point.y + keyboard.size.height - radius);
+        circles.push(top);
+        circles.push(bottom);
+      }
+
+      function onFrame(event) {
+        for (var i=0; i<circles.length; i++) {
+          circles[i].opacity *= 0.9;
+          circles[i].scale(1.2);
+          circles[i].hue += 1;
+          if(circles[i].opacity < 0.01) {
+            circles[i].remove();
+            circles.splice(i, 1);
+            i--;
           }
         }
+      }
 
-        if(keyData[event.key]) {
-          key = keyData[event.key] + 12 * octave;
-          console.log(key);
-          sounds[key].play();
+      function gradient(startColor, endColor, steps) {
+        var start = {
+          'Hex'   : startColor,
+          'R'     : parseInt(startColor.slice(1,3), 16),
+          'G'     : parseInt(startColor.slice(3,5), 16),
+          'B'     : parseInt(startColor.slice(5,7), 16)
         }
+        var end = {
+          'Hex'   : endColor,
+          'R'     : parseInt(endColor.slice(1,3), 16),
+          'G'     : parseInt(endColor.slice(3,5), 16),
+          'B'     : parseInt(endColor.slice(5,7), 16)
+        }
+        diffR = end['R'] - start['R'];
+        diffG = end['G'] - start['G'];
+        diffB = end['B'] - start['B'];
+
+        stepsHex  = new Array();
+        stepsR    = new Array();
+        stepsG    = new Array();
+        stepsB    = new Array();
+
+        for(var i = 0; i <= steps; i++) {
+          stepsR[i] = start['R'] + ((diffR / steps) * i);
+          stepsG[i] = start['G'] + ((diffG / steps) * i);
+          stepsB[i] = start['B'] + ((diffB / steps) * i);
+          stepsHex[i] = '#' + Math.round(stepsR[i]).toString(16) + '' + Math.round(stepsG[i]).toString(16) + '' + Math.round(stepsB[i]).toString(16);
+        }
+        return stepsHex;
       }
 
     </script>
