@@ -39,6 +39,24 @@
       title.fontSize = '5em';
       title.content = 'Virtual Piano';
 
+      var labelsText = new PointText(new Point(view.size.width * 5/32, view.size.height * 1/8));
+      labelsText.fillColor = 'white';
+      labelsText.justification = 'center';
+      labelsText.fontSize = '1.2em';
+      labelsText.content = 'Labels: On';
+      labelsText.onClick = toggleLabels;
+      labelsText.onMouseDown = function(event) { this.fillColor = '#d0d0d0'; }
+      labelsText.onMouseUp = function(event) { this.fillColor = 'white'; }
+
+      var bubblesText= new PointText(new Point(view.size.width * 1/4, view.size.height * 1/8));
+      bubblesText.fillColor = 'white';
+      bubblesText.justification = 'center';
+      bubblesText.fontSize = '1.2em';
+      bubblesText.content = 'Effects: On';
+      bubblesText.onClick = toggleBubbles;
+      bubblesText.onMouseDown = function(event) { this.fillColor = '#d0d0d0'; }
+      bubblesText.onMouseUp = function(event) { this.fillColor = 'white'; }
+
       var ovb = new Path.Circle(octaveControl.point1, octaveControl.radius);
       ovb.fillColor = 'white';
       ovb.onClick = octaveDown;
@@ -49,7 +67,7 @@
       ovbText.fontWeight = 'bold';
       ovbText.fillColor = 'black';
       ovbText.fontSize = '1.5em';
-      ovbText.content = '\`';
+      ovbText.content = '1';
       textPaths.push(ovbText);
 
       var ova = ovb.clone();
@@ -59,7 +77,7 @@
       ova.onMouseUp = function(event) { this.fillColor = 'white'; }
       var ovaText = ovbText.clone();
       ovaText.position = ova.position;
-      ovaText.content = '\'';
+      ovaText.content = '\\';
       textPaths.push(ovaText);
 
       ovb.removeSegment(2);
@@ -113,15 +131,15 @@
       
 
       function onKeyDown(event) {
-        if(event.key == '`') {
+        if(event.key == '1') {
           octaveDown();
           ovb.fillColor = '#d0d0d0'; 
-        } else if(event.key == '\'') {
+        } else if(event.key == '\\') {
           octaveUp();
           ova.fillColor = '#d0d0d0'; 
-        } else if(event.key == '\\') {
+        } else if(event.key == '`') {
           toggleLabels();
-        } else if(event.key == '\|') {
+        } else if(event.key == '~') {
           toggleBubbles();
         }
         if(keyData[event.key]) {
@@ -132,9 +150,9 @@
       }
 
       function onKeyUp(event) {
-        if(event.key == '`') {
+        if(event.key == '1') {
           ovb.fillColor = 'white';
-        } else if(event.key == '\'') {
+        } else if(event.key == '\\') {
           ova.fillColor = 'white';
         }
         if(keyData[event.key]) {
@@ -157,14 +175,16 @@
       }
       
       function toggleLabels() {
+        labels = !labels;
         for (var i=0; i<textPaths.length; i++) {
           textPaths[i].opacity = labels ? 1: 0;
         }
-        labels = !labels;
+        labelsText.content = labels ? "Labels: On" : "Labels: Off";
       }
 
       function toggleBubbles() {
         bubbles = !bubbles;
+        bubblesText.content = bubbles ? "Effects: On" : "Effects: Off";
       }
 
       function octaveUp() {
